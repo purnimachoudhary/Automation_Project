@@ -2,6 +2,9 @@
 uName=purnima
 s3Bucket=upgrad-purnima
 
+inventoryFilePath=/var/www/html/inventory.html
+cronJobPath=/etc/cron.d/automation
+
 #step1: Update the packages
 apt update -y
 
@@ -42,3 +45,29 @@ sudo tar -czvf /var/tmp/$uName-httpd-logs-$timestamp.tar access.log error.log
 
 #step6:copy tar file into s3 bucket
 aws s3 cp /var/tmp/$uName-httpd-logs-$timestamp.tar s3://${s3Bucket}/$uName-httpd-logs-$timestamp.tar
+
+#step7:check inverntory file is present or not
+if [ -f "$inventoryFilePath" ]
+then
+        echo "$inventoryFilePath  File present"
+else
+        echo "inventory.html File Not Found,Creating the new file"
+        touch $inventoryFilePath
+        echo "<b>Log Type &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date Created &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Type &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size</b>" >> $inventoryFilePath
+        echo "new file is created in $inventoryFilePath"
+fi
+echo "adding backup log status into inventory.html file"
+fileSize=$(du -h /var/tmp/$uName-httpd-logs-$timestamp.tar | awk '{print $1}')
+echo "Backup Size :$fileSize"
+echo "<br>httpd-logs &nbsp;&nbsp;&nbsp;&nbsp; $timestamp &nbsp;&nbsp;&nbsp;&nbsp; tar &nbsp;&nbsp;&nbsp;&nbsp; $fileSize" >> $inventoryFilePath
+
+#step8:checking the cronjob is present in etc/corn.d
+if [ -f "$cronJobPath" ]
+then
+        echo "Cron job is scheduled already"
+else
+        touch $cronJobPath
+        #this cron job will execute on every dat at 12.00
+        echo "0 0 * * * root /root/Automation_Project/automation.sh" >> $cronJobPath
+        echo "Cron Job is scheduled"
+fi
